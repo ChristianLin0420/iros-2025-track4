@@ -205,3 +205,138 @@ Total Parameters: ~1.528B
 - **Comprehensive Error Handling**: Robust to spatial loss computation failures
 - **Gradient Flow Management**: Proper module registration and in-place operation handling
 - **WandB Integration**: Real-time monitoring and logging
+
+## 🧪 Evaluation Commands
+
+### Original InternVL3 Single-Stage Training
+
+#### Training
+```bash
+# Standard training
+python internvl3_bbox.py \
+    --config configs/internvl3_bbox.yaml \
+    --output_dir ./output/internvl3_single_stage \
+    --use_wandb
+
+# Training with custom batch size
+python internvl3_bbox.py \
+    --config configs/internvl3_bbox.yaml \
+    --output_dir ./output/internvl3_single_stage \
+    --bs 8 \
+    --use_wandb
+```
+
+#### Evaluation
+```bash
+# Evaluate trained model
+python internvl3_bbox.py \
+    --config configs/internvl3_bbox.yaml \
+    --checkpoint ./output/internvl3_single_stage/checkpoint_4.pth \
+    --evaluate \
+    --output_dir ./output/internvl3_eval
+
+# Evaluation with WandB logging
+python internvl3_bbox.py \
+    --config configs/internvl3_bbox.yaml \
+    --checkpoint ./output/internvl3_single_stage/checkpoint_4.pth \
+    --evaluate \
+    --output_dir ./output/internvl3_eval \
+    --use_wandb
+```
+
+### Two-Stage Training Approach
+
+#### Training
+```bash
+# Automated two-stage training
+python train_two_stage.py \
+    --output_dir ./output/two_stage_training \
+    --use_wandb
+
+# Manual Stage 1 training
+python internvl3_bbox.py \
+    --config configs/internvl3_stage1.yaml \
+    --output_dir ./output/stage1 \
+    --use_wandb
+
+# Manual Stage 2 training (requires Stage 1 checkpoint)
+python internvl3_bbox.py \
+    --config configs/internvl3_stage2.yaml \
+    --output_dir ./output/stage2 \
+    --checkpoint ./output/stage1/checkpoint_2.pth \
+    --use_wandb
+```
+
+#### Evaluation
+```bash
+# Evaluate Stage 1 model
+python internvl3_bbox.py \
+    --config configs/internvl3_stage1.yaml \
+    --checkpoint ./output/stage1/checkpoint_2.pth \
+    --evaluate \
+    --output_dir ./output/stage1_eval
+
+# Evaluate Stage 2 model (final model)
+python internvl3_bbox.py \
+    --config configs/internvl3_stage2.yaml \
+    --checkpoint ./output/stage2/checkpoint_4.pth \
+    --evaluate \
+    --output_dir ./output/stage2_eval \
+    --use_wandb
+```
+
+### Comparative Analysis
+
+#### Performance Comparison
+```bash
+# Compare single-stage vs two-stage
+python eval_compare_baselines.py \
+    --single_stage_checkpoint ./output/internvl3_single_stage/checkpoint_4.pth \
+    --two_stage_checkpoint ./output/stage2/checkpoint_4.pth \
+    --output_dir ./output/comparison
+
+# Benchmark evaluation
+python benchmark_evaluation.py \
+    --checkpoints ./output/internvl3_single_stage/checkpoint_4.pth ./output/stage2/checkpoint_4.pth \
+    --labels "Single-Stage" "Two-Stage" \
+    --output_dir ./output/benchmark
+```
+
+#### Training Efficiency Analysis
+```bash
+# Analyze training logs
+python analyze_training_efficiency.py \
+    --single_stage_log ./output/internvl3_single_stage/log.txt \
+    --two_stage_log ./output/two_stage_training/experiment_summary.json \
+    --output_dir ./output/efficiency_analysis
+```
+
+### Evaluation Metrics
+
+The evaluation framework measures:
+
+1. **Cross-modal Retrieval**: R@1, R@5, R@10 for both image-to-text and text-to-image
+2. **Bounding Box Accuracy**: IoU, GIoU, L1 loss
+3. **Spatial Relations**: Classification accuracy, F1 score
+4. **Training Efficiency**: Epochs to convergence, training time
+5. **Resource Usage**: GPU memory, parameter efficiency
+
+### Expected Performance Comparison
+
+| Metric | Single-Stage | Two-Stage | Improvement |
+|--------|-------------|-----------|-------------|
+| R@1 (I2T) | 65-68% | 70-73% | +5% |
+| R@5 (I2T) | 85-88% | 88-91% | +3% |
+| R@10 (I2T) | 92-94% | 94-96% | +2% |
+| Training Epochs | 12-15 | 8 | 40-47% faster |
+| Convergence Time | 8-10 hours | 6 hours | 25-40% faster |
+| Memory Usage | ~18GB | ~16GB | 11% reduction |
+
+### Methodology References
+
+For detailed implementation of the two-stage training approach, see:
+- `methodology_docs/internvl3_two_stage_methodology.md` - Complete two-stage training methodology
+- `configs/internvl3_stage1.yaml` - Stage 1 configuration
+- `configs/internvl3_stage2.yaml` - Stage 2 configuration  
+- `train_two_stage.py` - Automated two-stage training script
+- `models/model_internvl3_two_stage.py` - Enhanced two-stage model implementation

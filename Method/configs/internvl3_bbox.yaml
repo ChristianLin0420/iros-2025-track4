@@ -16,8 +16,8 @@ image_res: 384
 patch_size: 16
 
 # Training Parameters
-batch_size_train: 4  # Further reduced for float32 InternVL3-1B
-batch_size_test: 1
+batch_size_train: 16  # Further reduced for float32 InternVL3-1B
+batch_size_test: 4
 batch_size_test_text: 512
 max_tokens: 50
 embed_dim: 256
@@ -35,7 +35,7 @@ optimizer:
 schedular:
   sched: cosine
   lr: 1e-3
-  epochs: 5
+  epochs: 1
   num_warmup_steps: 0.1
 
 # Loss Weights

@@ -18,7 +18,7 @@ import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 
-from models.model_internvl3_bbox import InternVL3BenchModel
+from models.model_internvl3_two_stage import InternVL3TwoStageModel
 import logging
 import gc
 
@@ -284,8 +284,8 @@ def main(args, config):
             config=config
         )
     
-    print("Creating InternVL3 model", flush=True)
-    model = InternVL3BenchModel(config=config)
+    print("Creating InternVL3 two-stage model", flush=True)
+    model = InternVL3TwoStageModel(config=config)
     
     if args.checkpoint and os.path.exists(args.checkpoint):
         print(f"Loading checkpoint from {args.checkpoint}")
@@ -393,6 +393,10 @@ def main(args, config):
         for epoch in range(0, max_epoch):
             if args.distributed:
                 train_loader.sampler.set_epoch(epoch)
+            
+            # Update model epoch for progressive training
+            if hasattr(model_without_ddp, 'update_epoch'):
+                model_without_ddp.update_epoch(epoch + 1)  # 1-indexed epochs
             
             train_stats = train(model, train_loader, optimizer, tokenizer, epoch, device, lr_scheduler, config)
             

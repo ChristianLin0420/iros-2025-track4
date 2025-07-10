@@ -55,8 +55,8 @@ def get_dist_launch(args):  # some examples
     elif args.dist.startswith('gpu'):  # use one gpu, --dist "gpu0"
         num = int(args.dist[3:])
         assert 0 <= num <= 8
-        return "CUDA_VISIBLE_DEVICES={:} WORLD_SIZE=1 python3 -m torch.distributed.launch --master_port=12347 --nproc_per_node=1 " \
-               "--nnodes=1 ".format(num)
+        return "CUDA_VISIBLE_DEVICES={:} WORLD_SIZE=1 python3 -m torch.distributed.launch --master_port={:} --nproc_per_node=1 " \
+               "--nnodes=1 ".format(num, MASTER_PORT)
     
     else:
         raise ValueError

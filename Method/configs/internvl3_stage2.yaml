@@ -1,0 +1,132 @@
+# Stage 2: Multi-task Refinement - All Tasks with Progressive Weighting
+# Build upon Stage 1 foundation with bbox and spatial tasks
+
+# Dataset paths
+train_file: ["/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/train.json"]
+test_file: "/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/test_24G_version.json"
+image_root: '/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/images'
+
+# Model Configuration
+model_name: "InternVL3-1B-Stage2"
+model_path: "OpenGVLab/InternVL3-1B"
+use_internvl3: true
+use_clip_vit: false
+use_swin: false
+use_roberta: false
+
+# Image Settings
+image_res: 384
+patch_size: 16
+
+# Training Parameters - Stage 2 Optimized
+batch_size_train: 8  # Reduced for complex multi-task training
+batch_size_test: 4
+batch_size_test_text: 512
+max_tokens: 50
+embed_dim: 256
+temp: 0.07
+k_test: 256
+
+# Optimizer Settings - Stage 2
+optimizer:
+  opt: adamW
+  lr: 1e-5  # Stage 2 learning rate (lower)
+  weight_decay: 0.01
+  lr_mult: 1.0
+
+# Scheduler Settings - Stage 2
+schedular:
+  sched: cosine
+  lr: 1e-5
+  epochs: 5  # Stage 2: 5 epochs
+  num_warmup_steps: 0.1
+
+# Loss Configuration - Stage 2: All losses enabled
+loss_config:
+  stage: 2
+  enable_itc: true
+  enable_itm: true
+  enable_bbox: true
+  enable_spatial: true
+  progressive_weighting: true  # Enable progressive loss scaling
+
+# Loss Weights - Stage 2 with Progressive Scaling
+loss_weights:
+  itc_weight: 1.0
+  itm_weight: 1.0
+  bbox_weight: 0.1  # Start low, will be scaled progressively
+  spatial_weight: 0.1  # Start low, will be scaled progressively
+
+# Progressive Loss Scaling - Stage 2
+progressive_loss:
+  enabled: true
+  total_epochs: 5
+  scaling_epochs: 3  # First 3 epochs for progressive scaling
+  
+  # Epoch-wise scaling factors
+  epoch_scaling:
+    1: 
+      bbox_scale: 0.5
+      spatial_scale: 0.5
+    2:
+      bbox_scale: 0.75
+      spatial_scale: 0.75
+    3:
+      bbox_scale: 1.0
+      spatial_scale: 1.0
+    4:
+      bbox_scale: 1.0
+      spatial_scale: 1.0
+    5:
+      bbox_scale: 1.0
+      spatial_scale: 1.0
+
+# Model Architecture - Stage 2
+model_config:
+  freeze_base_model: false  # Allow gradual unfreezing
+  trainable_components: ["adapters", "task_heads"]
+  gradual_unfreezing: true
+  
+  # Gradual unfreezing schedule
+  unfreezing_schedule:
+    epoch_1: ["adapters"]
+    epoch_2: ["adapters", "task_heads"]
+    epoch_3: ["adapters", "task_heads", "last_layer"]
+    epoch_4: ["adapters", "task_heads", "last_layer", "last_two_layers"]
+    epoch_5: ["adapters", "task_heads", "last_layer", "last_two_layers"]
+  
+  # Enhanced adapter configuration
+  adapter_config:
+    dropout: 0.1
+    use_layer_norm: true  # Enhanced adapters with layer norm
+    use_skip_connection: true  # Enhanced adapters with skip connections
+    hidden_dim_multiplier: 1.0
+
+# WandB Configuration - Stage 2
+wandb:
+  project: "drone-navigation"
+  name: "internvl3-stage2-multitask-progressive"
+  tags: ["internvl3", "stage2", "multitask", "progressive", "bbox", "spatial"]
+  log_interval: 10
+  save_interval: 100
+
+# Stage 2 specific settings
+stage2_config:
+  load_stage1_checkpoint: true  # Load Stage 1 checkpoint
+  stage1_checkpoint_path: ""  # Will be set during training
+  
+  # Multi-task training settings
+  task_balancing: true
+  adaptive_loss_weighting: false  # Use fixed progressive weighting
+  
+  # Validation settings
+  validate_every_epoch: true
+  save_best_model: true
+  early_stopping_patience: 3
+  
+  # Task-specific evaluation
+  evaluate_tasks_separately: true
+  task_evaluation_metrics:
+    - "retrieval_accuracy"
+    - "bbox_accuracy"
+    - "spatial_accuracy" 

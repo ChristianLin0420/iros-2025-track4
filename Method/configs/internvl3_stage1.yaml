@@ -1,0 +1,81 @@
+# Stage 1: Foundation Training - Cross-modal Alignment
+# Focus on core ITC + ITM losses for stable cross-modal alignment
+
+# Dataset paths
+train_file: ["/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/train.json"]
+test_file: "/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/test_24G_version.json"
+image_root: '/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/images'
+
+# Model Configuration
+model_name: "InternVL3-1B-Stage1"
+model_path: "OpenGVLab/InternVL3-1B"
+use_internvl3: true
+use_clip_vit: false
+use_swin: false
+use_roberta: false
+
+# Image Settings
+image_res: 384
+patch_size: 16
+
+# Training Parameters - Stage 1 Optimized
+batch_size_train: 12  # Increased from 4 to 6 for Stage 1
+batch_size_test: 4
+batch_size_test_text: 512
+max_tokens: 50
+embed_dim: 256
+temp: 0.07
+k_test: 256
+
+# Optimizer Settings - Stage 1
+optimizer:
+  opt: adamW
+  lr: 5e-5  # Stage 1 learning rate
+  weight_decay: 0.01
+  lr_mult: 1.0
+
+# Scheduler Settings - Stage 1
+schedular:
+  sched: cosine
+  lr: 5e-5
+  epochs: 3  # Stage 1: 3 epochs
+  num_warmup_steps: 0.1
+
+# Loss Configuration - Stage 1: Only ITC + ITM
+loss_config:
+  stage: 1
+  enable_itc: true
+  enable_itm: true
+  enable_bbox: false  # Disabled in Stage 1
+  enable_spatial: false  # Disabled in Stage 1
+
+# Loss Weights - Stage 1
+loss_weights:
+  itc_weight: 1.0
+  itm_weight: 1.0
+  bbox_weight: 0.0  # Disabled
+  spatial_weight: 0.0  # Disabled
+
+# Model Architecture - Stage 1
+model_config:
+  freeze_base_model: true  # Freeze InternVL3 base model
+  trainable_components: ["adapters"]  # Only train adapters
+  adapter_config:
+    dropout: 0.1
+    use_layer_norm: false  # Simple adapters for Stage 1
+    use_skip_connection: false
+
+# WandB Configuration - Stage 1
+wandb:
+  project: "drone-navigation"
+  name: "internvl3-stage1-foundation-itc-itm"
+  tags: ["internvl3", "stage1", "foundation", "itc", "itm"]
+  log_interval: 10
+  save_interval: 100
+
+# Stage 1 specific settings
+stage1_config:
+  focus_on_alignment: true
+  validate_every_epoch: true
+  save_best_model: true
+  early_stopping_patience: 2 
