@@ -1,0 +1,26 @@
+
+# Checkpoints
+checkpoints/
+
+# Logs
+logs/
+
+# Results
+results/
+
+# Dataset
+datasets/
+
+# Output
+Method/output/
+
+# Wandb
+Method/wandb/
+
+# __pycache__
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
