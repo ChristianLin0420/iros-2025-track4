@@ -1,4 +1,4 @@
-from torch.optim.lr_scheduler import LambdaLR
+from torch.optim.lr_scheduler import LambdaLR, CosineAnnealingLR
 
 
 def create_scheduler(args, optimizer):
@@ -21,6 +21,8 @@ def create_scheduler(args, optimizer):
             )
 
         lr_scheduler = LambdaLR(optimizer, lr_lambda, last_epoch=-1)
+    elif args.sched == 'cosine':
+        lr_scheduler = CosineAnnealingLR(optimizer, T_max=args.num_training_steps, eta_min=0)
 
     else:
         raise NotImplementedError(f"args.sched == {args.sched}")

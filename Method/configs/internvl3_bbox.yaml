@@ -1,0 +1,54 @@
+# Dataset paths
+train_file: ["/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/train.json"]
+test_file: "/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/test_24G_version.json"
+image_root: '/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/images'
+
+# Model Configuration
+model_name: "InternVL3-1B"
+model_path: "OpenGVLab/InternVL3-1B"
+use_internvl3: true
+use_clip_vit: false
+use_swin: false
+use_roberta: false
+
+# Image Settings
+image_res: 384
+patch_size: 16
+
+# Training Parameters
+batch_size_train: 4  # Further reduced for float32 InternVL3-1B
+batch_size_test: 1
+batch_size_test_text: 512
+max_tokens: 50
+embed_dim: 256
+temp: 0.07
+k_test: 256
+
+# Optimizer Settings
+optimizer:
+  opt: adamW
+  lr: 1e-3
+  weight_decay: 0.01
+  lr_mult: 1.0
+
+# Scheduler Settings
+schedular:
+  sched: cosine
+  lr: 1e-3
+  epochs: 5
+  num_warmup_steps: 0.1
+
+# Loss Weights
+loss_weights:
+  itc_weight: 1.0
+  itm_weight: 1.0
+  bbox_weight: 0.1
+  spatial_weight: 0.1
+
+# WandB Configuration
+wandb:
+  project: "drone-navigation"
+  name: "internvl3-1b-bbox-finetune+cosine_scheduler+lr_1e-3"
+  tags: ["internvl3", "cross-modal", "bbox", "spatial"]
+  log_interval: 10
+  save_interval: 100 

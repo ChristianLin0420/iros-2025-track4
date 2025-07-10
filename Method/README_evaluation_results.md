@@ -58,7 +58,7 @@ Each row represents a different method, with columns showing various evaluation 
 | Method | txt_r1 | txt_r5 | txt_r10 | txt_r_mean | img_r1 | img_r5 | img_r10 | img_r_mean | r_mean | Eval Time |
 |--------|--------|--------|---------|------------|--------|--------|---------|------------|---------|-----------|
 | Baseline | 51.11% | 81.37% | 90.45% | 74.31% | 29.96% | 46.14% | 54.01% | 43.37% | **58.84%** | 0:26:49 |
-| [Method 2] | - | - | - | - | - | - | - | - | - | - |
+| InternVL3-1B | - | - | - | - | - | - | - | - | - | - |
 | [Method 3] | - | - | - | - | - | - | - | - | - | - |
 
 **To add a new method**: Replace `[Method X]` with your method name and fill in the corresponding metric values.

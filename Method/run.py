@@ -55,9 +55,9 @@ def get_dist_launch(args):  # some examples
     elif args.dist.startswith('gpu'):  # use one gpu, --dist "gpu0"
         num = int(args.dist[3:])
         assert 0 <= num <= 8
-        return "CUDA_VISIBLE_DEVICES={:} WORLD_SIZE=1 python3 -m torch.distributed.launch --nproc_per_node=1 " \
+        return "CUDA_VISIBLE_DEVICES={:} WORLD_SIZE=1 python3 -m torch.distributed.launch --master_port=12347 --nproc_per_node=1 " \
                "--nnodes=1 ".format(num)
-
+    
     else:
         raise ValueError
 
@@ -231,8 +231,22 @@ def run_re_bbox(args):
               f"--output_dir {args.output_dir} --bs {args.bs} --checkpoint {args.checkpoint} {'--evaluate' if args.evaluate else ''}")
 
 
+def run_internvl3_bbox(args):
+    dist_launch = get_dist_launch(args)
+    
+    # Build optional arguments
+    checkpoint_arg = f"--checkpoint {args.checkpoint}" if args.checkpoint else ""
+    bs_arg = f"--bs {args.bs}" if args.bs > 0 else ""
+    evaluate_arg = "--evaluate" if args.evaluate else ""
+    wandb_arg = "--use_wandb" if getattr(args, 'use_wandb', False) else ""
+    
+    os.system(f"{dist_launch} "
+              f"--use_env internvl3_bbox.py --config {args.config} "
+              f"--output_dir {args.output_dir} {bs_arg} {checkpoint_arg} {evaluate_arg} {wandb_arg}")
+
+
 def run(args):
-    if args.task not in ['pretrain_4m_base']:
+    if args.task not in ['pretrain_4m_base', 'internvl3_bbox']:
         assert hexists(args.checkpoint) or hexists(args.load_ckpt_from)
 
     if args.task == 'pretrain_4m_base':
@@ -332,6 +346,10 @@ def run(args):
     elif args.task == 're_bbox':
         args.config = 'configs/re_bbox.yaml'
         run_re_bbox(args)
+    
+    elif args.task == 'internvl3_bbox':
+        args.config = 'configs/internvl3_bbox.yaml'
+        run_internvl3_bbox(args)
 
     else:
         raise NotImplementedError(f"task == {args.task}")
@@ -357,6 +375,7 @@ if __name__ == '__main__':
                                                                     "to collect eval results among nodes")
 
     parser.add_argument('--evaluate', action='store_true', help="evaluation on downstream tasks")
+    parser.add_argument('--use_wandb', action='store_true', help="use wandb for logging")
 
     args = parser.parse_args()
 
