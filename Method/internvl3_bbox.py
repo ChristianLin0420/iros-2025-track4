@@ -71,7 +71,7 @@ def train(model, data_loader, optimizer, tokenizer, epoch, device, scheduler, co
         for batch_idx in range(batch_length):  # Changed from 'i' to 'batch_idx'
             for j in range(3):
                 if target_bboxes[batch_idx][j][0] > 0:
-                    target_bbox = target_bboxes[batch_idx][j]
+                    target_bbox = target_bboxes[batch_idx][j].to(device)  # Move to device
                     sen = sens[batch_idx][j]
                     
                     sen_token = tokenizer(sen, padding='longest', max_length=config['max_tokens'], 
@@ -101,11 +101,11 @@ def train(model, data_loader, optimizer, tokenizer, epoch, device, scheduler, co
         optimizer.step()
         scheduler.step()
         
-        # Update metrics
+        # Update metrics - ensure all losses are tensors
         metric_logger.update(loss_itm=loss_itm.item())
         metric_logger.update(loss_itc=loss_itc.item())
-        metric_logger.update(loss_bb=loss_bb.item())
-        metric_logger.update(loss_spatial=loss_spatial.item())
+        metric_logger.update(loss_bb=loss_bb.item() if hasattr(loss_bb, 'item') else loss_bb)
+        metric_logger.update(loss_spatial=loss_spatial.item() if hasattr(loss_spatial, 'item') else loss_spatial)
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         
         # WandB logging
@@ -114,8 +114,8 @@ def train(model, data_loader, optimizer, tokenizer, epoch, device, scheduler, co
                 'train/loss_total': loss.item(),
                 'train/loss_itc': loss_itc.item(),
                 'train/loss_itm': loss_itm.item(),
-                'train/loss_bb': loss_bb.item(),
-                'train/loss_spatial': loss_spatial.item(),
+                'train/loss_bb': loss_bb.item() if hasattr(loss_bb, 'item') else loss_bb,
+                'train/loss_spatial': loss_spatial.item() if hasattr(loss_spatial, 'item') else loss_spatial,
                 'train/lr': optimizer.param_groups[0]["lr"],
                 'train/epoch': epoch,
                 'train/step': epoch * len(data_loader) + i
@@ -183,7 +183,7 @@ def evaluation(model, data_loader, tokenizer, device, config):
         score_matrix_i2t[start + i, topk_idx] = topk_sim
     
     # Synchronize across processes
-    if args.distributed:
+    if utils.is_dist_avail_and_initialized():
         dist.barrier()
         torch.distributed.all_reduce(score_matrix_i2t, op=torch.distributed.ReduceOp.SUM)
     
@@ -201,7 +201,7 @@ def evaluation(model, data_loader, tokenizer, device, config):
         topk_sim, topk_idx = sims.topk(k=config['k_test'], dim=0)
         score_matrix_t2i[start + i, topk_idx] = topk_sim
     
-    if args.distributed:
+    if utils.is_dist_avail_and_initialized():
         dist.barrier()
         torch.distributed.all_reduce(score_matrix_t2i, op=torch.distributed.ReduceOp.SUM)
     
@@ -340,7 +340,8 @@ def main(args, config):
                     'eval/r_mean': test_result['r_mean']
                 })
         
-        dist.barrier()
+        if utils.is_dist_avail_and_initialized():
+            dist.barrier()
     
     else:
         print("Start training", flush=True)
@@ -417,7 +418,8 @@ def main(args, config):
                     }
                     torch.save(save_obj, os.path.join(args.output_dir, f'checkpoint_{epoch}.pth'))
             
-            dist.barrier()
+            if utils.is_dist_avail_and_initialized():
+                dist.barrier()
             torch.cuda.empty_cache()
         
         if utils.is_main_process():

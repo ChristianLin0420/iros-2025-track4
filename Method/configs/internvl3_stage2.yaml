@@ -7,8 +7,8 @@ test_file: "/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross
 image_root: '/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/images'
 
 # Model Configuration
-model_name: "InternVL3-1B-Stage2"
-model_path: "OpenGVLab/InternVL3-1B"
+model_name: "InternVL3-8B-Stage2"
+model_path: "OpenGVLab/InternVL3-8B"
 use_internvl3: true
 use_clip_vit: false
 use_swin: false
@@ -105,7 +105,7 @@ model_config:
 # WandB Configuration - Stage 2
 wandb:
   project: "drone-navigation"
-  name: "internvl3-stage2-multitask-progressive"
+  name: "internvl3-8b-stage2-multitask-progressive"
   tags: ["internvl3", "stage2", "multitask", "progressive", "bbox", "spatial"]
   log_interval: 10
   save_interval: 100

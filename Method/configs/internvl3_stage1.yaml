@@ -7,8 +7,8 @@ test_file: "/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross
 image_root: '/localhome/local-chrislin/vla/iros-2025-track4/datasets/track4-cross-modal-drone-navigation/images'
 
 # Model Configuration
-model_name: "InternVL3-1B-Stage1"
-model_path: "OpenGVLab/InternVL3-1B"
+model_name: "InternVL3-8B-Stage1"
+model_path: "OpenGVLab/InternVL3-8B"
 use_internvl3: true
 use_clip_vit: false
 use_swin: false
@@ -68,7 +68,7 @@ model_config:
 # WandB Configuration - Stage 1
 wandb:
   project: "drone-navigation"
-  name: "internvl3-stage1-foundation-itc-itm"
+  name: "internvl3-8b-stage1-foundation-itc-itm"
   tags: ["internvl3", "stage1", "foundation", "itc", "itm"]
   log_interval: 10
   save_interval: 100

@@ -9,6 +9,9 @@ from models.box_ops import box_cxcywh_to_xyxy, generalized_box_iou
 def compute_rela(bbox1, bbox2):
     """Compute spatial relationship between two bounding boxes"""
     try:
+        # Determine device from input tensors
+        device = bbox1.device if torch.is_tensor(bbox1) else (bbox2.device if torch.is_tensor(bbox2) else torch.device('cpu'))
+        
         # Handle tensor inputs
         if torch.is_tensor(bbox1):
             bbox1 = bbox1.cpu().numpy() if bbox1.dim() > 0 else float(bbox1)
@@ -18,7 +21,7 @@ def compute_rela(bbox1, bbox2):
         # Ensure we have 4 elements for each bbox
         if len(bbox1) != 4 or len(bbox2) != 4:
             print(f"Warning: invalid bbox dimensions - bbox1: {bbox1}, bbox2: {bbox2}")
-            return torch.tensor([1, 1])  # Default to center-middle
+            return torch.tensor([1, 1], device=device)  # Default to center-middle
         
         x1, y1, w1, h1 = bbox1
         x2, y2, w2, h2 = bbox2
@@ -42,12 +45,14 @@ def compute_rela(bbox1, bbox2):
         else:
             vertical = 2  # 'lower'
 
-        return torch.tensor([horizontal, vertical])
+        return torch.tensor([horizontal, vertical], device=device)
         
     except Exception as e:
         print(f"Error in compute_rela: {e}")
         print(f"bbox1: {bbox1}, bbox2: {bbox2}")
-        return torch.tensor([1, 1])  # Default to center-middle
+        # Try to infer device from error context
+        device = bbox1.device if torch.is_tensor(bbox1) else (bbox2.device if torch.is_tensor(bbox2) else torch.device('cpu'))
+        return torch.tensor([1, 1], device=device)  # Default to center-middle
 
 class EnhancedAdapter(nn.Module):
     """Enhanced adapter with skip connections and layer normalization"""
@@ -441,6 +446,9 @@ class InternVL3TwoStageModel(nn.Module):
     
     def get_bbox_loss(self, pred_bbox, target_bbox):
         """Compute bounding box loss (L1 + GIoU)"""
+        # Ensure both tensors are on the same device
+        target_bbox = target_bbox.to(pred_bbox.device)
+        
         # L1 loss
         loss_l1 = F.l1_loss(pred_bbox, target_bbox, reduction='mean')
         
@@ -449,7 +457,7 @@ class InternVL3TwoStageModel(nn.Module):
         target_boxes = box_cxcywh_to_xyxy(target_bbox)
         
         if (pred_boxes[:, 2:] < pred_boxes[:, :2]).any() or (target_boxes[:, 2:] < target_boxes[:, :2]).any():
-            loss_giou = torch.tensor(0.0, device=pred_bbox.device)
+            loss_giou = torch.tensor(0.0, device=pred_bbox.device, requires_grad=True)
         else:
             loss_giou = 1 - torch.diag(generalized_box_iou(pred_boxes, target_boxes)).mean()
         
@@ -526,8 +534,8 @@ class InternVL3TwoStageModel(nn.Module):
             
             # Stage 2: Add bbox and spatial losses
             if pair is not None and len(pair) > 0:
-                loss_bb = 0
-                total_spatial_loss = 0
+                loss_bb = torch.tensor(0.0, device=images.device, requires_grad=True)
+                total_spatial_loss = torch.tensor(0.0, device=images.device, requires_grad=True)
                 loss_count = 0
                 
                 for i, (batch_idx, sen_token, target_bbox) in enumerate(pair):
@@ -543,8 +551,9 @@ class InternVL3TwoStageModel(nn.Module):
                         pred_bbox = self.predict_bbox(sen_vision, sen_text, sen_token.attention_mask)
                         
                         # Compute bbox loss
-                        loss_bbox, loss_giou = self.get_bbox_loss(pred_bbox, target_bbox.unsqueeze(0))
-                        loss_bb += (loss_bbox + loss_giou)
+                        target_bbox_tensor = target_bbox.unsqueeze(0).to(pred_bbox.device)
+                        loss_bbox, loss_giou = self.get_bbox_loss(pred_bbox, target_bbox_tensor)
+                        loss_bb = loss_bb + loss_bbox + loss_giou
                         
                         # Update bbox collector for spatial loss
                         bbox_info = {
@@ -555,7 +564,7 @@ class InternVL3TwoStageModel(nn.Module):
                         spatial_loss = self.bbox_collector.update_bbox(bbox_info)
                         
                         if spatial_loss is not None:
-                            total_spatial_loss += spatial_loss
+                            total_spatial_loss = total_spatial_loss + spatial_loss
                             loss_count += 1
                             
                     except Exception as e:
@@ -566,11 +575,17 @@ class InternVL3TwoStageModel(nn.Module):
                 if len(pair) > 0:
                     loss_bb = current_weights.get('bbox_weight', 0.1) * loss_bb / len(pair)
                     losses.append(loss_bb)
+                else:
+                    # No bbox pairs - append zero loss
+                    losses.append(torch.tensor(0.0, device=images.device, requires_grad=True))
                 
                 # Add spatial loss
                 if loss_count > 0:
                     loss_spatial = current_weights.get('spatial_weight', 0.1) * total_spatial_loss / loss_count
                     losses.append(loss_spatial)
+                else:
+                    # No spatial pairs - append zero loss
+                    losses.append(torch.tensor(0.0, device=images.device, requires_grad=True))
                 
                 # Reset bbox collector
                 self.bbox_collector.collect_bbox = []
